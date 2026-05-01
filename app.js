@@ -108,18 +108,10 @@ function addMessage(type, content, sources = null) {
     const formattedContent = formatContent(content);
     contentDiv.innerHTML = formattedContent;
     
-    // Add sources if available
+    // Add sources if available (hidden - for internal tracking only)
     if (sources && sources.length > 0) {
-        const sourcesDiv = document.createElement('div');
-        sourcesDiv.className = 'sources';
-        sourcesDiv.innerHTML = '<div class="sources-label">📚 Sources:</div>';
-        sources.forEach(source => {
-            const sourceTag = document.createElement('span');
-            sourceTag.className = 'source-tag';
-            sourceTag.textContent = source.document;
-            sourcesDiv.appendChild(sourceTag);
-        });
-        contentDiv.appendChild(sourcesDiv);
+        // Sources are tracked but not displayed to user
+        messageDiv.dataset.sources = JSON.stringify(sources);
     }
     
     messageDiv.appendChild(avatar);
@@ -218,10 +210,34 @@ const closeModal = document.getElementById('closeModal');
 const docList = document.getElementById('docList');
 const addDocBtn = document.getElementById('addDocBtn');
 const resetDocsBtn = document.getElementById('resetDocsBtn');
-const newDocFilename = document.getElementById('newDocFilename');
+const fileInput = document.getElementById('fileInput');
+const selectFileBtn = document.getElementById('selectFileBtn');
+const selectedFileName = document.getElementById('selectedFileName');
 const newDocName = document.getElementById('newDocName');
 const docPills = document.getElementById('docPills');
 const docCount = document.getElementById('docCount');
+
+// File picker
+selectFileBtn.addEventListener('click', () => {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        selectedFileName.textContent = file.name;
+        selectedFileName.style.color = 'var(--neon-green)';
+        
+        // Auto-fill display name if empty
+        if (!newDocName.value) {
+            const displayName = file.name.replace(/\.(md|txt)$/i, '').replace(/[-_]/g, ' ');
+            newDocName.value = displayName;
+        }
+    } else {
+        selectedFileName.textContent = 'No file selected';
+        selectedFileName.style.color = 'var(--text-secondary)';
+    }
+});
 
 // Open modal
 manageDocsBtn.addEventListener('click', () => {
@@ -296,11 +312,11 @@ function updateDocumentStatus(documents) {
 
 // Add document
 addDocBtn.addEventListener('click', async () => {
-    const filename = newDocFilename.value.trim();
+    const file = fileInput.files[0];
     const name = newDocName.value.trim();
     
-    if (!filename) {
-        alert('Please enter a filename');
+    if (!file) {
+        alert('Please select a file');
         return;
     }
     
@@ -313,22 +329,29 @@ addDocBtn.addEventListener('click', async () => {
         addDocBtn.disabled = true;
         addDocBtn.textContent = 'Adding...';
         
+        // Read file content
+        const content = await file.text();
+        
+        // Save file to backend directory (we'll send filename and content)
         const response = await fetch(`${BACKEND_URL}/documents/add`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                filename: filename,
-                name: name
+                filename: file.name,
+                name: name,
+                content: content
             })
         });
         
         const data = await response.json();
         
         if (response.ok) {
-            alert(`Success! Added ${data.chunks_added} chunks from ${filename}`);
-            newDocFilename.value = '';
+            alert(`Success! Added ${data.chunks_added} chunks from ${file.name}`);
+            fileInput.value = '';
+            selectedFileName.textContent = 'No file selected';
+            selectedFileName.style.color = 'var(--text-secondary)';
             newDocName.value = '';
             loadDocuments();
         } else {

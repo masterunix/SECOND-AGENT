@@ -1,10 +1,10 @@
 """
 GlobalFreight Smart Shipment Assistant - Backend
 Production-ready RAG system using LangChain + ChromaDB
-Version: 1.0
+Version: 1.0 - Optimized
 """
 
-__version__ = "1.0"
+__version__ = "1.0-optimized"
 
 import os
 from dotenv import load_dotenv
@@ -17,6 +17,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 import chromadb
+from functools import lru_cache
+import hashlib
 
 # Load environment variables
 load_dotenv()
@@ -48,11 +50,16 @@ llm = AzureChatOpenAI(
     openai_api_version=AZURE_OPENAI_API_VERSION,
     azure_endpoint=AZURE_OPENAI_ENDPOINT,
     api_key=AZURE_OPENAI_API_KEY,
-    temperature=1  # gpt-5-nano only supports temperature=1
+    temperature=1,  # gpt-5-nano only supports temperature=1
+    request_timeout=30,  # 30 second timeout
+    max_retries=2  # Reduce retries for faster failure
 )
 
 # Global vectorstore
 vectorstore = None
+
+# Simple in-memory cache for query results
+query_cache = {}
 
 def load_documents():
     """Load the three policy documents"""
@@ -87,10 +94,10 @@ def create_vectorstore():
     if not documents:
         raise ValueError("No documents loaded. Please ensure DOC1, DOC2, DOC3 files exist.")
     
-    # Split documents into chunks
+    # Split documents into chunks - OPTIMIZED: smaller overlap for faster processing
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
+        chunk_size=800,  # Reduced from 1000
+        chunk_overlap=100,  # Reduced from 200
         length_function=len,
     )
     
@@ -118,30 +125,28 @@ def create_vectorstore():
 def create_qa_chain(vectorstore):
     """Create the QA chain with custom prompt using LCEL"""
     
-    # Custom prompt template for grounded responses
-    template = """You are the GlobalFreight Shipment Assistant. Answer questions STRICTLY based on the provided context from three policy documents: Carrier SLA Agreement, Customs Tariff Reference, and Shipment Delay Policy.
+    # Custom prompt template for grounded responses - OPTIMIZED: more concise
+    template = """You are the GlobalFreight Shipment Assistant. Answer ONLY from the context below.
 
-CRITICAL RULES:
-1. ONLY answer questions that can be answered from the provided context
-2. If a question is outside the scope of these documents (like weather, general knowledge, unrelated topics), respond with: "I can only answer questions about GlobalFreight policies, including transit times, service tiers, compensation rules, HS codes, customs duties, and delay handling procedures. Your question appears to be outside this scope."
-3. Be precise and cite specific information from the documents
-4. For multi-step questions requiring information from multiple documents, synthesize the answer clearly
-5. Never make up or hallucinate information - if you're unsure, say so
-6. Use specific numbers, timeframes, and policy details from the context
+RULES:
+1. Answer ONLY from provided context
+2. If question is out-of-scope (weather, general knowledge, etc.), respond: "I can only answer questions about GlobalFreight policies. Your question is outside this scope."
+3. Be precise and concise
+4. Never hallucinate - if unsure, say so
 
-Context from policy documents:
+Context:
 {context}
 
 Question: {question}
 
-Grounded Answer:"""
+Answer:"""
 
     prompt = ChatPromptTemplate.from_template(template)
     
-    # Create retriever
+    # Create retriever - OPTIMIZED: fewer chunks for faster processing
     retriever = vectorstore.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 6}  # Retrieve top 6 most relevant chunks
+        search_kwargs={"k": 3}  # Reduced from 6 to 3 for faster processing
     )
     
     # Format documents function
@@ -176,13 +181,23 @@ def health():
 
 @app.route('/query', methods=['POST'])
 def query():
-    """Main query endpoint"""
+    """Main query endpoint with caching"""
     try:
         data = request.json
         question = data.get('question', '').strip()
         
         if not question:
             return jsonify({'error': 'Question is required'}), 400
+        
+        # Create cache key from question
+        cache_key = hashlib.md5(question.lower().encode()).hexdigest()
+        
+        # Check cache first
+        if cache_key in query_cache:
+            print(f"Cache hit for: {question[:50]}...")
+            cached_result = query_cache[cache_key]
+            cached_result['cached'] = True
+            return jsonify(cached_result)
         
         # Get answer from QA chain
         answer = qa_chain.invoke(question)
@@ -207,10 +222,20 @@ def query():
                 seen.add(source_key)
                 unique_sources.append(source)
         
-        return jsonify({
+        result = {
             'answer': answer,
-            'sources': unique_sources[:3]  # Top 3 source documents
-        })
+            'sources': unique_sources[:3],  # Top 3 source documents
+            'cached': False
+        }
+        
+        # Cache the result (limit cache size to 100 entries)
+        if len(query_cache) < 100:
+            query_cache[cache_key] = {
+                'answer': answer,
+                'sources': unique_sources[:3]
+            }
+        
+        return jsonify(result)
     
     except Exception as e:
         print(f"Error processing query: {str(e)}")
@@ -229,6 +254,25 @@ def sample_queries():
             "What is the HS code and import duty for mobile phones?",
             "What is the weather in Mumbai today?"
         ]
+    })
+
+@app.route('/cache/clear', methods=['POST'])
+def clear_cache():
+    """Clear the query cache"""
+    global query_cache
+    cache_size = len(query_cache)
+    query_cache.clear()
+    return jsonify({
+        'success': True,
+        'message': f'Cleared {cache_size} cached queries'
+    })
+
+@app.route('/cache/stats', methods=['GET'])
+def cache_stats():
+    """Get cache statistics"""
+    return jsonify({
+        'cached_queries': len(query_cache),
+        'max_cache_size': 100
     })
 
 @app.route('/documents', methods=['GET'])
@@ -269,6 +313,7 @@ def add_document():
         data = request.json
         filename = data.get('filename', '').strip()
         doc_name = data.get('name', '').strip()
+        content = data.get('content', '').strip()
         
         if not filename:
             return jsonify({'error': 'Filename is required'}), 400
@@ -276,17 +321,13 @@ def add_document():
         if not doc_name:
             doc_name = filename
         
-        # Read the file
-        try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                content = f.read()
-        except FileNotFoundError:
-            return jsonify({'error': f'File {filename} not found'}), 404
+        if not content:
+            return jsonify({'error': 'File content is required'}), 400
         
         # Split into chunks
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
+            chunk_size=800,
+            chunk_overlap=100,
             length_function=len,
         )
         chunks = text_splitter.split_text(content)
@@ -297,6 +338,9 @@ def add_document():
         
         # Add to vectorstore
         vectorstore.add_texts(texts=chunks, metadatas=metadatas)
+        
+        # Clear cache when documents change
+        query_cache.clear()
         
         print(f"Added {len(chunks)} chunks from {filename}")
         
@@ -339,6 +383,9 @@ def remove_document():
         # Delete the documents
         collection.delete(ids=results['ids'])
         
+        # Clear cache when documents change
+        query_cache.clear()
+        
         print(f"Removed {len(results['ids'])} chunks from {filename}")
         
         return jsonify({
@@ -362,6 +409,10 @@ def reset_documents():
         print("Resetting to default documents...")
         vectorstore = create_vectorstore()
         qa_chain, retriever = create_qa_chain(vectorstore)
+        
+        # Clear cache when documents change
+        query_cache.clear()
+        
         print("Reset complete!")
         
         return jsonify({

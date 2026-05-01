@@ -750,6 +750,51 @@ body {
     gap: 12px;
 }
 
+.file-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-secondary {
+    padding: 12px 20px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--neon-green);
+    border-radius: 10px;
+    color: var(--neon-green);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+
+.btn-secondary:hover {
+    background: rgba(0, 255, 136, 0.1);
+    box-shadow: var(--glow-green);
+    transform: translateY(-2px);
+}
+
+.selected-file {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.help-text {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 8px;
+    opacity: 0.7;
+}
+
 .add-doc-form input {
     padding: 14px 18px;
     background: var(--glass-bg);

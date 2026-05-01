@@ -51,10 +51,15 @@
                     <div class="add-doc-section">
                         <h3>Add New Document</h3>
                         <div class="add-doc-form">
-                            <input type="text" id="newDocFilename" placeholder="Filename (e.g., DOC4-new-policy.md)" />
+                            <div class="file-picker-wrapper">
+                                <input type="file" id="fileInput" accept=".md,.txt" style="display: none;" />
+                                <button class="btn-secondary" id="selectFileBtn">Choose File</button>
+                                <span id="selectedFileName" class="selected-file">No file selected</span>
+                            </div>
                             <input type="text" id="newDocName" placeholder="Display Name (e.g., New Policy)" />
                             <button class="btn-primary" id="addDocBtn">Add Document</button>
                         </div>
+                        <p class="help-text">Select a .md or .txt file from your computer to add to the knowledge base.</p>
                     </div>
                     
                     <div class="reset-section">
