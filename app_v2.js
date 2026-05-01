@@ -209,7 +209,7 @@ async function processCurrentEvent() {
     const event = eventStream[currentEventIndex];
     
     processBtn.disabled = true;
-    processBtn.textContent = 'Processing... (5-10s)';
+    processBtn.textContent = 'Processing... (10-40s)';
     
     // Show processing message
     const processingMsg = document.createElement('div');
@@ -221,7 +221,7 @@ async function processCurrentEvent() {
         </div>
         <div class="result-content">
             <p>⏳ Agent is analyzing the event, querying policies, and making decisions...</p>
-            <p style="color: var(--text-secondary); font-size: 0.85rem;">This typically takes 5-10 seconds.</p>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;">This typically takes 10-40 seconds depending on API response time.</p>
         </div>
     `;
     const resultsContainer = document.getElementById('results');
@@ -234,7 +234,8 @@ async function processCurrentEvent() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(event)
+            body: JSON.stringify(event),
+            signal: AbortSignal.timeout(60000)  // 60 second timeout
         });
         
         const result = await response.json();
@@ -245,6 +246,12 @@ async function processCurrentEvent() {
         
         if (response.ok) {
             result.duration = duration;
+            
+            // Check for timeout warning
+            if (result.warning === 'timeout') {
+                showMessage('warning', `⚠️ Processing timed out but actions were logged`);
+            }
+            
             displayResult(result);
             
             // Move to next event
@@ -277,7 +284,7 @@ async function processCurrentEvent() {
 async function processAllEvents() {
     if (processingAll) return;
     
-    if (!confirm('Process all 20 events? This will take a few minutes.')) {
+    if (!confirm('Process all 24 events? This will take a few minutes.')) {
         return;
     }
     

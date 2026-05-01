@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backend Connection Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .test { margin: 10px 0; padding: 10px; background: #2a2a2a; }
+        .pass { color: #00ff00; }
+        .fail { color: #ff4444; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Backend Connection Test</h1>
+    <button onclick="runTests()">Run Tests</button>
+    <div id="results"></div>
+
+    <script>
+        async function runTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Running tests...</p>';
+            
+            let html = '';
+            
+            // Test 1: Health endpoint
+            html += '<div class="test"><strong>Test 1: Health Endpoint</strong><br>';
+            try {
+                const response = await fetch('http://localhost:5001/health');
+                const data = await response.json();
+                html += `<span class="pass">✓ PASS</span> - Backend is healthy<br>`;
+                html += `Version: ${data.version}<br>`;
+                html += `Status: ${data.status}<br>`;
+                html += `Tools: ${data.tools_available}`;
+            } catch (error) {
+                html += `<span class="fail">✗ FAIL</span> - ${error.message}`;
+            }
+            html += '</div>';
+            
+            // Test 2: Simple test endpoint
+            html += '<div class="test"><strong>Test 2: Simple Test Endpoint</strong><br>';
+            try {
+                const response = await fetch('http://localhost:5001/test-simple', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_id: 'TEST' })
+                });
+                const data = await response.json();
+                html += `<span class="pass">✓ PASS</span> - ${data.message}`;
+            } catch (error) {
+                html += `<span class="fail">✗ FAIL</span> - ${error.message}`;
+            }
+            html += '</div>';
+            
+            // Test 3: CORS check
+            html += '<div class="test"><strong>Test 3: CORS Configuration</strong><br>';
+            try {
+                const response = await fetch('http://localhost:5001/health');
+                const corsHeader = response.headers.get('Access-Control-Allow-Origin');
+                if (corsHeader) {
+                    html += `<span class="pass">✓ PASS</span> - CORS enabled: ${corsHeader}`;
+                } else {
+                    html += `<span class="fail">✗ FAIL</span> - CORS headers not found`;
+                }
+            } catch (error) {
+                html += `<span class="fail">✗ FAIL</span> - ${error.message}`;
+            }
+            html += '</div>';
+            
+            // Test 4: Event stream file
+            html += '<div class="test"><strong>Test 4: Event Stream File</strong><br>';
+            try {
+                const response = await fetch('Version2/event_stream.json');
+                const data = await response.json();
+                html += `<span class="pass">✓ PASS</span> - Loaded ${data.length} events`;
+            } catch (error) {
+                html += `<span class="fail">✗ FAIL</span> - ${error.message}`;
+            }
+            html += '</div>';
+            
+            results.innerHTML = html;
+        }
+        
+        // Auto-run on load
+        window.onload = runTests;
+    </script>
+</body>
+</html>

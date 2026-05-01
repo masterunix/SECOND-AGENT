@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Status Check</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #00ff00;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .status-card h2 {
+            margin-bottom: 15px;
+            color: #00ffff;
+        }
+        
+        .status-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+        
+        .pass {
+            color: #00ff00;
+            border-left: 4px solid #00ff00;
+        }
+        
+        .fail {
+            color: #ff4444;
+            border-left: 4px solid #ff4444;
+        }
+        
+        .warning {
+            color: #ffaa00;
+            border-left: 4px solid #ffaa00;
+        }
+        
+        .loading {
+            color: #00ffff;
+            border-left: 4px solid #00ffff;
+        }
+        
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        button:hover {
+            background: #00cc00;
+        }
+        
+        .actions {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log pre {
+            color: #00ff00;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .summary {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .summary.fail {
+            background: rgba(255, 68, 68, 0.1);
+            border-color: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 GlobalFreight System Status Check</h1>
+        
+        <div class="actions">
+            <button onclick="runAllTests()">🔄 Run All Tests</button>
+            <button onclick="window.location.href='index_v2.html'">🚀 Open Application</button>
+            <button onclick="window.location.href='test_frontend_backend.html'">🧪 Simple Test</button>
+        </div>
+        
+        <div id="summary"></div>
+        
+        <div class="status-grid">
+            <div class="status-card">
+                <h2>Backend Server</h2>
+                <div id="backend-status"></div>
+            </div>
+            
+            <div class="status-card">
+                <h2>Frontend Server</h2>
+                <div id="frontend-status"></div>
+            </div>
+            
+            <div class="status-card">
+                <h2>API Endpoints</h2>
+                <div id="api-status"></div>
+            </div>
+            
+            <div class="status-card">
+                <h2>Data Files</h2>
+                <div id="files-status"></div>
+            </div>
+        </div>
+        
+        <div class="log">
+            <h2>Detailed Log</h2>
+            <pre id="log"></pre>
+        </div>
+    </div>
+    
+    <script>
+        let log = [];
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            log.push(`[${timestamp}] ${message}`);
+            document.getElementById('log').textContent = log.join('\n');
+        }
+        
+        function setStatus(elementId, html) {
+            document.getElementById(elementId).innerHTML = html;
+        }
+        
+        async function testBackendHealth() {
+            addLog('Testing backend health endpoint...');
+            try {
+                const response = await fetch('http://localhost:5001/health', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog(`✓ Backend health check passed: ${JSON.stringify(data)}`);
+                    
+                    setStatus('backend-status', `
+                        <div class="status-item pass">
+                            <strong>✓ Backend Running</strong><br>
+                            Port: 5001<br>
+                            Version: ${data.version}<br>
+                            Status: ${data.status}<br>
+                            Tools: ${data.tools_available}<br>
+                            Policies: ${data.policies_loaded ? 'Loaded' : 'Not Loaded'}
+                        </div>
+                    `);
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                addLog(`✗ Backend health check failed: ${error.message}`, 'error');
+                setStatus('backend-status', `
+                    <div class="status-item fail">
+                        <strong>✗ Backend Not Responding</strong><br>
+                        Error: ${error.message}<br>
+                        <br>
+                        <strong>Fix:</strong><br>
+                        1. Open terminal<br>
+                        2. Run: python3 backend_v2.py<br>
+                        3. Wait for "Agent ready!" message
+                    </div>
+                `);
+                return false;
+            }
+        }
+        
+        async function testBackendSimple() {
+            addLog('Testing backend simple endpoint...');
+            try {
+                const response = await fetch('http://localhost:5001/test-simple', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_id: 'STATUS-CHECK' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog(`✓ Simple endpoint test passed`);
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                addLog(`✗ Simple endpoint test failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testFrontendFiles() {
+            addLog('Testing frontend file access...');
+            const files = [
+                'index_v2.html',
+                'app_v2.js',
+                'styles_v2.css',
+                'Version2/event_stream.json'
+            ];
+            
+            let allPass = true;
+            let html = '';
+            
+            for (const file of files) {
+                try {
+                    const response = await fetch(file);
+                    if (response.ok) {
+                        addLog(`✓ File accessible: ${file}`);
+                        html += `<div class="status-item pass">✓ ${file}</div>`;
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    addLog(`✗ File not accessible: ${file} - ${error.message}`, 'error');
+                    html += `<div class="status-item fail">✗ ${file}</div>`;
+                    allPass = false;
+                }
+            }
+            
+            setStatus('files-status', html);
+            return allPass;
+        }
+        
+        async function testEventStream() {
+            addLog('Testing event stream loading...');
+            try {
+                const response = await fetch('Version2/event_stream.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog(`✓ Event stream loaded: ${data.length} events`);
+                    
+                    setStatus('frontend-status', `
+                        <div class="status-item pass">
+                            <strong>✓ Frontend Accessible</strong><br>
+                            Port: 8000<br>
+                            Events: ${data.length}<br>
+                            Files: All present
+                        </div>
+                    `);
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                addLog(`✗ Event stream loading failed: ${error.message}`, 'error');
+                setStatus('frontend-status', `
+                    <div class="status-item fail">
+                        <strong>✗ Frontend Issues</strong><br>
+                        Error: ${error.message}<br>
+                        <br>
+                        <strong>Fix:</strong><br>
+                        1. Open terminal<br>
+                        2. Run: python3 -m http.server 8000<br>
+                        3. Access: http://localhost:8000/
+                    </div>
+                `);
+                return false;
+            }
+        }
+        
+        async function testCORS() {
+            addLog('Testing CORS configuration...');
+            try {
+                const response = await fetch('http://localhost:5001/health');
+                const corsHeader = response.headers.get('Access-Control-Allow-Origin');
+                
+                if (corsHeader) {
+                    addLog(`✓ CORS enabled: ${corsHeader}`);
+                    return true;
+                } else {
+                    addLog(`⚠ CORS headers not found`, 'warning');
+                    return false;
+                }
+            } catch (error) {
+                addLog(`✗ CORS test failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testProcessing() {
+            addLog('Testing event processing (this may take 10-40 seconds)...');
+            
+            const testEvent = {
+                event_id: 'STATUS-TEST',
+                shipment_id: 'SHP-TEST',
+                customer: 'Test Customer',
+                customer_tier: 'Gold',
+                origin: 'LAX',
+                destination: 'JFK',
+                carrier: 'Test Carrier',
+                event_type: 'delay',
+                description: 'Status check test event',
+                delay_hours: 2,
+                reason_code: 'TEST',
+                cargo_type: 'General',
+                cargo_value_usd: 10000,
+                notes: 'Automated status check',
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch('http://localhost:5001/process-event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testEvent),
+                    signal: AbortSignal.timeout(45000)
+                });
+                
+                const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog(`✓ Event processing test passed in ${duration}s`);
+                    
+                    let status = 'pass';
+                    let message = 'Normal';
+                    
+                    if (duration > 30) {
+                        status = 'warning';
+                        message = 'Slow (>30s)';
+                    }
+                    
+                    setStatus('api-status', `
+                        <div class="status-item ${status}">
+                            <strong>✓ Event Processing</strong><br>
+                            Test Duration: ${duration}s<br>
+                            Status: ${message}<br>
+                            Actions: ${data.actions_taken || 0}
+                        </div>
+                    `);
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                addLog(`✗ Event processing test failed: ${error.message}`, 'error');
+                setStatus('api-status', `
+                    <div class="status-item fail">
+                        <strong>✗ Processing Failed</strong><br>
+                        Error: ${error.message}<br>
+                        <br>
+                        This may indicate:<br>
+                        - Azure API is slow<br>
+                        - Agent is timing out<br>
+                        - Backend needs restart
+                    </div>
+                `);
+                return false;
+            }
+        }
+        
+        async function runAllTests() {
+            log = [];
+            addLog('='.repeat(60));
+            addLog('Starting comprehensive system check...');
+            addLog('='.repeat(60));
+            
+            // Set loading states
+            setStatus('backend-status', '<div class="status-item loading">⏳ Testing...</div>');
+            setStatus('frontend-status', '<div class="status-item loading">⏳ Testing...</div>');
+            setStatus('api-status', '<div class="status-item loading">⏳ Testing...</div>');
+            setStatus('files-status', '<div class="status-item loading">⏳ Testing...</div>');
+            
+            const results = {
+                backendHealth: await testBackendHealth(),
+                backendSimple: await testBackendSimple(),
+                cors: await testCORS(),
+                frontendFiles: await testFrontendFiles(),
+                eventStream: await testEventStream()
+            };
+            
+            // Only test processing if backend is healthy
+            if (results.backendHealth) {
+                results.processing = await testProcessing();
+            } else {
+                setStatus('api-status', `
+                    <div class="status-item fail">
+                        <strong>✗ Skipped</strong><br>
+                        Backend not running
+                    </div>
+                `);
+                results.processing = false;
+            }
+            
+            addLog('='.repeat(60));
+            addLog('Test Summary:');
+            for (const [test, passed] of Object.entries(results)) {
+                addLog(`${passed ? '✓' : '✗'} ${test}: ${passed ? 'PASS' : 'FAIL'}`);
+            }
+            addLog('='.repeat(60));
+            
+            const allPass = Object.values(results).every(r => r === true);
+            const passCount = Object.values(results).filter(r => r === true).length;
+            const totalCount = Object.keys(results).length;
+            
+            if (allPass) {
+                document.getElementById('summary').innerHTML = `
+                    <div class="summary">
+                        <h2>✓ ALL SYSTEMS OPERATIONAL</h2>
+                        <p>All ${totalCount} tests passed!</p>
+                        <p>The application is ready to use.</p>
+                        <button onclick="window.location.href='index_v2.html'" style="margin-top: 20px;">
+                            🚀 Open Application
+                        </button>
+                    </div>
+                `;
+            } else {
+                document.getElementById('summary').innerHTML = `
+                    <div class="summary fail">
+                        <h2>⚠ ISSUES DETECTED</h2>
+                        <p>${passCount} of ${totalCount} tests passed</p>
+                        <p>Please check the detailed log below and fix the failing tests.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-run on load
+        window.onload = () => {
+            addLog('Page loaded. Click "Run All Tests" to start.');
+            runAllTests();
+        };
+    </script>
+</body>
+</html>

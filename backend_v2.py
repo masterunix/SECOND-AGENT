@@ -45,9 +45,9 @@ llm = AzureChatOpenAI(
     openai_api_version=AZURE_OPENAI_API_VERSION,
     azure_endpoint=AZURE_OPENAI_ENDPOINT,
     api_key=AZURE_OPENAI_API_KEY,
-    temperature=1,
-    request_timeout=60,
-    max_retries=2
+    temperature=0.7,  # Reduced for more consistent, faster responses
+    request_timeout=45,  # Reduced timeout
+    max_retries=1  # Reduced retries for speed
 )
 
 # Global state for agent
@@ -422,57 +422,33 @@ def create_exception_agent():
         log_decision
     ]
     
-    # Agent prompt
+    # Agent prompt - optimized for speed
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are the GlobalFreight Exception Handler AI Agent.
+        ("system", """You are the GlobalFreight Exception Handler AI Agent. Process events quickly and safely.
 
-Your mission: Process logistics exception events autonomously and safely.
+WORKFLOW (be efficient):
+1. Check shipment history (if needed)
+2. Query policy ONCE for key rules
+3. Assess severity: CRITICAL (pharma/medical/perishables >4h) | HIGH (Platinum >4h, customs, cancellations) | MEDIUM (Gold >8h) | LOW (minor)
+4. Log decision
+5. Take action
 
-CORE RESPONSIBILITIES:
-1. Assess severity based on: cargo type, customer tier, delay duration, reason code
-2. Decide: auto-resolve OR escalate to human
-3. Take appropriate actions using your tools
-4. Maintain detailed audit log of every decision
+CRITICAL GUARDRAIL:
+- Max 3 cancellations per 10 minutes
+- Use request_cancellation_approval for cancellations
 
-CRITICAL SAFETY GUARDRAIL:
-- NO agent may cancel more than 3 shipments in any 10-minute window
-- On the 3rd cancellation request, you MUST use request_cancellation_approval tool
-- The tool will enforce the guardrail and escalate if needed
+ESCALATE TO HUMAN:
+- Pharma/medical >2h → Medical Supplies Desk
+- Perishables >4h → Operations Manager
+- Cancellations → Operations Manager
+- Regulatory issues → Senior Account Manager
 
-CONTEXT AWARENESS:
-- Use get_shipment_history to check if you've seen this shipment before
-- Multiple events may reference the same shipment (e.g., EVT-001 and EVT-008)
-- Remember previous decisions and build on them
+AUTO-RESOLVE:
+- Minor delays within SLA
+- Routine updates
+- Standard compensation
 
-SEVERITY ASSESSMENT RULES:
-- CRITICAL: Pharma/medical, perishables >4h delay, high-value Platinum, regulatory issues
-- HIGH: Platinum delays >4h, Gold delays >12h, customs holds, cancellations
-- MEDIUM: Standard tier delays, port congestion, minor documentation issues
-- LOW: Minor delays within tolerance, routine updates
-
-DECISION FRAMEWORK:
-1. Query policy documents for relevant rules
-2. Check shipment history for context
-3. Assess severity
-4. Log your decision with reasoning
-5. Take action(s) using appropriate tools
-6. Always explain your reasoning
-
-ESCALATION TRIGGERS (MUST escalate to human):
-- Pharma/medical delays >2h → Medical Supplies Desk
-- Perishables >4h delay → Operations Manager
-- Legal/financial documents → Senior Account Manager
-- Cancellation requests → Operations Manager (via request_cancellation_approval)
-- Regulatory/embargo issues → Senior Account Manager
-- High-value Platinum issues → Senior Account Manager
-
-AUTO-RESOLVE SCENARIOS:
-- Minor delays within SLA tolerance
-- Routine ETA updates
-- Standard notifications
-- Compensation application per policy
-
-Be thorough, precise, and always prioritize safety."""),
+Be concise. Take action quickly."""),
         MessagesPlaceholder(variable_name="chat_history", optional=True),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad")
@@ -483,9 +459,10 @@ Be thorough, precise, and always prioritize safety."""),
         agent=agent,
         tools=tools,
         verbose=False,  # Disable verbose output for speed
-        max_iterations=10,  # Reduced from 15
+        max_iterations=8,  # Reduced for speed
         handle_parsing_errors=True,
-        return_intermediate_steps=False  # Don't return intermediate steps
+        return_intermediate_steps=False,  # Don't return intermediate steps
+        max_execution_time=40  # Maximum 40 seconds per event
     )
     
     return agent_executor
@@ -525,51 +502,67 @@ def process_event():
         event_id = event.get('event_id', 'UNKNOWN')
         shipment_id = event.get('shipment_id', 'UNKNOWN')
         
+        print(f"\n{'='*60}")
+        print(f"Processing {event_id} - {shipment_id}")
+        print(f"{'='*60}")
+        
         # Store event in shipment context
         if shipment_id not in shipment_context:
             shipment_context[shipment_id] = []
         shipment_context[shipment_id].append(event)
         
-        # Format event for agent
+        # Format event for agent - more concise
         event_description = f"""
-Process this exception event:
+EVENT: {event_id} | SHIPMENT: {shipment_id}
+CUSTOMER: {event.get('customer')} ({event.get('customer_tier')})
+ROUTE: {event.get('origin')} → {event.get('destination')}
+CARRIER: {event.get('carrier')}
 
-EVENT ID: {event_id}
-SHIPMENT ID: {shipment_id}
-CUSTOMER: {event.get('customer', 'Unknown')} (Tier: {event.get('customer_tier', 'Unknown')})
-ROUTE: {event.get('origin', 'Unknown')} → {event.get('destination', 'Unknown')}
-CARRIER: {event.get('carrier', 'Unknown')}
+TYPE: {event.get('event_type')}
+DELAY: {event.get('delay_hours', 'N/A')}h | REASON: {event.get('reason_code', 'N/A')}
+CARGO: {event.get('cargo_type')} | VALUE: ${event.get('cargo_value_usd', 0):,}
 
-EVENT TYPE: {event.get('event_type', 'Unknown')}
-DESCRIPTION: {event.get('description', 'No description')}
+DESCRIPTION: {event.get('description')}
+{f"NOTES: {event.get('notes')}" if event.get('notes') else ""}
 
-DELAY: {event.get('delay_hours', 'N/A')} hours
-REASON CODE: {event.get('reason_code', 'N/A')}
-CARGO TYPE: {event.get('cargo_type', 'Unknown')}
-CARGO VALUE: ${event.get('cargo_value_usd', 0):,}
-
-NOTES: {event.get('notes', 'None')}
-
-Your task:
-1. Check if you've seen this shipment before (use get_shipment_history)
-2. Query relevant policies
-3. Assess severity
-4. Log your decision
-5. Take appropriate action(s)
+TASK: Assess, decide, act. Be efficient.
 """
         
         # Process with agent
-        result = agent_executor.invoke({
-            "input": event_description
-        })
-        
-        return jsonify({
-            'event_id': event_id,
-            'shipment_id': shipment_id,
-            'agent_response': result['output'],
-            'actions_taken': len([log for log in audit_log if log.get('action') != 'log_decision']),
-            'timestamp': datetime.now().isoformat()
-        })
+        start_time = datetime.now()
+        try:
+            result = agent_executor.invoke({
+                "input": event_description
+            })
+            duration = (datetime.now() - start_time).total_seconds()
+            
+            print(f"✓ Processed in {duration:.1f}s")
+            
+            return jsonify({
+                'event_id': event_id,
+                'shipment_id': shipment_id,
+                'agent_response': result['output'],
+                'actions_taken': len([log for log in audit_log if log.get('action') != 'log_decision']),
+                'duration': f"{duration:.1f}",
+                'timestamp': datetime.now().isoformat()
+            })
+        except Exception as agent_error:
+            duration = (datetime.now() - start_time).total_seconds()
+            print(f"✗ Agent error after {duration:.1f}s: {str(agent_error)}")
+            
+            # Return partial result if timeout
+            if "timeout" in str(agent_error).lower() or duration > 40:
+                return jsonify({
+                    'event_id': event_id,
+                    'shipment_id': shipment_id,
+                    'agent_response': f"Processing timed out after {duration:.1f}s. The agent may be overloaded or the API is slow. Recent actions were logged.",
+                    'actions_taken': len([log for log in audit_log if log.get('action') != 'log_decision']),
+                    'duration': f"{duration:.1f}",
+                    'timestamp': datetime.now().isoformat(),
+                    'warning': 'timeout'
+                })
+            else:
+                raise
     
     except Exception as e:
         print(f"Error processing event: {str(e)}")
