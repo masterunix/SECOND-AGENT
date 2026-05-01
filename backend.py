@@ -47,8 +47,8 @@ llm = AzureChatOpenAI(
     azure_deployment=AZURE_OPENAI_DEPLOYMENT,
     openai_api_version=AZURE_OPENAI_API_VERSION,
     azure_endpoint=AZURE_OPENAI_ENDPOINT,
-    api_key=AZURE_OPENAI_API_KEY
-    # temperature removed - gpt-5-nano only supports default value of 1
+    api_key=AZURE_OPENAI_API_KEY,
+    temperature=1  # gpt-5-nano only supports temperature=1
 )
 
 # Global vectorstore
