@@ -33,7 +33,12 @@ call venv\Scripts\activate.bat
 
 REM Install dependencies
 echo Installing dependencies...
-pip install -q -r requirements.txt
+echo Upgrading pip...
+python -m pip install --upgrade pip
+echo Installing numpy with prebuilt wheels...
+pip install --only-binary :all: numpy
+echo Installing remaining dependencies...
+pip install -r requirements.txt
 
 echo.
 echo Setup complete!

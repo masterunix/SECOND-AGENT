@@ -32,7 +32,12 @@ source venv/bin/activate
 
 # Install dependencies
 echo "📥 Installing dependencies..."
-pip install -q -r requirements.txt
+echo "⬆️  Upgrading pip..."
+python3 -m pip install --upgrade pip
+echo "🔢 Installing numpy with prebuilt wheels..."
+pip install --only-binary :all: numpy
+echo "📦 Installing remaining dependencies..."
+pip install -r requirements.txt
 
 echo ""
 echo "✅ Setup complete!"
