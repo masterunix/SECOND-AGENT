@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalFreight Smart Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">GF</div>
+                <div class="logo-text">
+                    <h1>GlobalFreight Smart Assistant</h1>
+                    <p class="subtitle">Grounded answers from SLA · Customs Tariff · Delay Policy</p>
+                </div>
+            </div>
+            <div class="status" id="statusIndicator">
+                <span class="status-indicator"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Document Status -->
+        <div class="doc-status">
+            <div class="doc-pills" id="docPills">
+                <span class="doc-pill">DOC1 — Carrier SLA</span>
+                <span class="doc-pill">DOC2 — Customs Tariff</span>
+                <span class="doc-pill">DOC3 — Delay Policy</span>
+            </div>
+            <div class="doc-actions">
+                <div class="doc-count" id="docCount">3 documents loaded</div>
+                <button class="doc-manage-btn" id="manageDocsBtn">Manage Documents</button>
+            </div>
+        </div>
+
+        <!-- Document Management Modal -->
+        <div class="modal" id="docModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Manage Documents</h2>
+                    <button class="modal-close" id="closeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="doc-list" id="docList">
+                        <!-- Documents will be loaded here -->
+                    </div>
+                    
+                    <div class="add-doc-section">
+                        <h3>Add New Document</h3>
+                        <div class="add-doc-form">
+                            <input type="text" id="newDocFilename" placeholder="Filename (e.g., DOC4-new-policy.md)" />
+                            <input type="text" id="newDocName" placeholder="Display Name (e.g., New Policy)" />
+                            <button class="btn-primary" id="addDocBtn">Add Document</button>
+                        </div>
+                    </div>
+                    
+                    <div class="reset-section">
+                        <button class="btn-danger" id="resetDocsBtn">Reset to Default Documents</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-container" id="chatContainer">
+            <!-- Welcome Message -->
+            <div class="message assistant-message">
+                <div class="message-avatar">GF</div>
+                <div class="message-content">
+                    <p>Hello! I'm the GlobalFreight Shipment Assistant. I answer questions grounded strictly in your three policy documents — SLA tiers, customs tariffs, and delay handling rules.</p>
+                    <p>Try one of the sample queries below, or type your own.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sample Queries -->
+        <div class="sample-queries">
+            <h3>Sample queries:</h3>
+            <div class="query-grid">
+                <button class="query-btn" data-query="What's the transit time from Mumbai to Hamburg for a Platinum shipment, including customs?">
+                    Mumbai → Hamburg transit time for Platinum, including customs?
+                </button>
+                <button class="query-btn" data-query="A Gold customer's shipment is 15 hours late. What compensation applies and what must we do?">
+                    Gold customer 15 hrs late — compensation & required actions?
+                </button>
+                <button class="query-btn" data-query="Can our agent autonomously cancel 5 shipments in a row?">
+                    Can our AI agent cancel 5 shipments in a row?
+                </button>
+                <button class="query-btn" data-query="What is the HS code and import duty for mobile phones?">
+                    HS code and import duty for mobile phones?
+                </button>
+                <button class="query-btn" data-query="What is the weather in Mumbai today?">
+                    What is the weather in Mumbai today?
+                </button>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-container">
+            <input 
+                type="text" 
+                id="userInput" 
+                placeholder="Ask about transit times, compensation, HS codes, or delay policies..."
+                autocomplete="off"
+            >
+            <button id="sendBtn" class="send-btn">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M2 10L18 2L10 18L8 11L2 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Send
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Answers are grounded in loaded documents only · No hallucinations · <span style="opacity: 0.6;">v1.0</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
