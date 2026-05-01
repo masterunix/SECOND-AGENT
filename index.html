@@ -3,125 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlobalFreight Smart Assistant</title>
+    <title>GlobalFreight AI Platform</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="header-content">
             <div class="logo">
                 <div class="logo-icon">GF</div>
                 <div class="logo-text">
-                    <h1>GlobalFreight Smart Assistant</h1>
-                    <p class="subtitle">Grounded answers from SLA · Customs Tariff · Delay Policy</p>
+                    <h1>GlobalFreight AI Platform</h1>
+                    <p class="subtitle">AI-Fortnight 2026</p>
                 </div>
             </div>
-            <div class="status" id="statusIndicator">
-                <span class="status-indicator"></span>
-                <span class="status-text">Connecting...</span>
-            </div>
-        </header>
-
-        <!-- Document Status -->
-        <div class="doc-status">
-            <div class="doc-pills" id="docPills">
-                <span class="doc-pill">DOC1 — Carrier SLA</span>
-                <span class="doc-pill">DOC2 — Customs Tariff</span>
-                <span class="doc-pill">DOC3 — Delay Policy</span>
-            </div>
-            <div class="doc-actions">
-                <div class="doc-count" id="docCount">3 documents loaded</div>
-                <button class="doc-manage-btn" id="manageDocsBtn">Manage Documents</button>
+            <div class="status-group">
+                <div class="status" id="statusIndicator">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
             </div>
         </div>
+    </header>
 
-        <!-- Document Management Modal -->
-        <div class="modal" id="docModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Manage Documents</h2>
-                    <button class="modal-close" id="closeModal">&times;</button>
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="level1">
+            <span class="tab-icon">💬</span>
+            <span class="tab-label">Level 1: RAG Assistant</span>
+            <span class="tab-desc">Grounded Q&A from policy documents</span>
+        </button>
+        <button class="tab-btn" data-tab="level2">
+            <span class="tab-icon">⚡</span>
+            <span class="tab-label">Level 2: Exception Handler</span>
+            <span class="tab-desc">Autonomous agent with safety guardrails</span>
+        </button>
+    </nav>
+
+    <!-- Level 1: RAG Assistant -->
+    <div class="tab-content active" id="level1">
+        <div class="container">
+            <!-- Document Status -->
+            <div class="doc-status">
+                <div class="doc-pills" id="docPills">
+                    <span class="doc-pill">DOC1 — Carrier SLA</span>
+                    <span class="doc-pill">DOC2 — Customs Tariff</span>
+                    <span class="doc-pill">DOC3 — Delay Policy</span>
                 </div>
-                <div class="modal-body">
-                    <div class="doc-list" id="docList">
-                        <!-- Documents will be loaded here -->
+                <div class="doc-actions">
+                    <div class="doc-count" id="docCount">3 documents loaded</div>
+                    <button class="doc-manage-btn" id="manageDocsBtn">Manage Documents</button>
+                </div>
+            </div>
+
+            <!-- Chat Container -->
+            <div class="chat-container" id="chatContainer">
+                <!-- Welcome Message -->
+                <div class="message assistant-message">
+                    <div class="message-avatar">GF</div>
+                    <div class="message-content">
+                        <p>Hello! I'm the GlobalFreight Shipment Assistant. I answer questions grounded strictly in your policy documents — SLA tiers, customs tariffs, and delay handling rules.</p>
+                        <p>Try one of the sample queries below, or type your own.</p>
                     </div>
-                    
-                    <div class="add-doc-section">
-                        <h3>Add New Document</h3>
-                        <div class="add-doc-form">
-                            <div class="file-picker-wrapper">
-                                <input type="file" id="fileInput" accept=".md,.txt" style="display: none;" />
-                                <button class="btn-secondary" id="selectFileBtn">Choose File</button>
-                                <span id="selectedFileName" class="selected-file">No file selected</span>
-                            </div>
-                            <input type="text" id="newDocName" placeholder="Display Name (e.g., New Policy)" />
-                            <button class="btn-primary" id="addDocBtn">Add Document</button>
+                </div>
+            </div>
+
+            <!-- Sample Queries -->
+            <div class="sample-queries">
+                <h3>Sample queries:</h3>
+                <div class="query-grid">
+                    <button class="query-btn" data-query="What's the transit time from Mumbai to Hamburg for a Platinum shipment, including customs?">
+                        Mumbai → Hamburg transit time for Platinum, including customs?
+                    </button>
+                    <button class="query-btn" data-query="A Gold customer's shipment is 15 hours late. What compensation applies and what must we do?">
+                        Gold customer 15 hrs late — compensation & required actions?
+                    </button>
+                    <button class="query-btn" data-query="Can our agent autonomously cancel 5 shipments in a row?">
+                        Can our AI agent cancel 5 shipments in a row?
+                    </button>
+                    <button class="query-btn" data-query="What is the HS code and import duty for mobile phones?">
+                        HS code and import duty for mobile phones?
+                    </button>
+                    <button class="query-btn" data-query="What is the weather in Mumbai today?">
+                        What is the weather in Mumbai today?
+                    </button>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    id="userInput" 
+                    placeholder="Ask about transit times, compensation, HS codes, or delay policies..."
+                    autocomplete="off"
+                >
+                <button id="sendBtn" class="send-btn">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M2 10L18 2L10 18L8 11L2 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Level 2: Exception Handler -->
+    <div class="tab-content" id="level2">
+        <div class="main-container">
+            <!-- Left Panel - Event Stream -->
+            <div class="left-panel">
+                <div class="panel-header">
+                    <h2>Event Stream</h2>
+                    <div class="progress-container">
+                        <div id="progressText" class="progress-text">Event 1 of 20</div>
+                        <div class="progress-bar">
+                            <div id="progress" class="progress-fill"></div>
                         </div>
-                        <p class="help-text">Select a .md or .txt file from your computer to add to the knowledge base.</p>
                     </div>
-                    
-                    <div class="reset-section">
-                        <button class="btn-danger" id="resetDocsBtn">Reset to Default Documents</button>
+                </div>
+                
+                <div id="eventList" class="event-list">
+                    <!-- Events will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Center Panel - Event Details & Processing -->
+            <div class="center-panel">
+                <!-- Event Details -->
+                <div class="details-card">
+                    <h2>Event Details</h2>
+                    <div id="eventDetails" class="event-details">
+                        <p style="color: var(--text-secondary);">Select an event to view details</p>
+                    </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="control-panel">
+                    <button id="processBtn" class="btn btn-primary">
+                        Process Event
+                    </button>
+                    <button id="processAllBtn" class="btn btn-secondary">
+                        Process All Events
+                    </button>
+                    <button id="testBtn" class="btn btn-small" style="background: var(--neon-blue); color: black;">
+                        Quick Test
+                    </button>
+                </div>
+
+                <!-- Guardrail Status -->
+                <div id="guardrailStatus" class="guardrail-status">
+                    <div class="guardrail-indicator ok">
+                        <strong>Cancellation Guardrail:</strong> 0 / 3 in last 10 minutes
+                        <span class="status-badge ok">OK</span>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div class="results-card">
+                    <div class="results-header">
+                        <h2>Processing Results</h2>
+                        <div class="results-actions">
+                            <button id="viewLogBtn" class="btn btn-small">View Audit Log</button>
+                            <button id="clearLogBtn" class="btn btn-small btn-danger">Clear Log</button>
+                        </div>
+                    </div>
+                    <div id="results" class="results-container">
+                        <!-- Results will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - System Info & Audit Log -->
+            <div class="right-panel">
+                <div class="panel-header">
+                    <h2>System Info</h2>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Agent Capabilities</h3>
+                    <ul class="capability-list">
+                        <li>✓ Query policy documents</li>
+                        <li>✓ Notify customers</li>
+                        <li>✓ Escalate to humans</li>
+                        <li>✓ Flag customs issues</li>
+                        <li>✓ Arrange alternative routing</li>
+                        <li>✓ Apply compensation</li>
+                        <li>✓ Request cancellation approval</li>
+                        <li>✓ Update ETA</li>
+                        <li>✓ Track shipment history</li>
+                        <li>✓ Log decisions</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3>Safety Guardrails</h3>
+                    <div class="guardrail-info">
+                        <p><strong>Cancellation Limit:</strong></p>
+                        <p>Max 3 cancellations per 10-minute window</p>
+                        <p class="guardrail-note">
+                            On the 3rd cancellation request, the agent MUST escalate to Operations Manager for approval.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Audit Log (collapsible) -->
+                <div id="auditLogContainer" class="audit-log-container" style="display: block;">
+                    <h3>📋 Audit Log</h3>
+                    <div id="auditLog" class="audit-log">
+                        <div class="audit-log-empty">No audit entries yet. Process an event to see logs here.</div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Chat Container -->
-        <div class="chat-container" id="chatContainer">
-            <!-- Welcome Message -->
-            <div class="message assistant-message">
-                <div class="message-avatar">GF</div>
-                <div class="message-content">
-                    <p>Hello! I'm the GlobalFreight Shipment Assistant. I answer questions grounded strictly in your three policy documents — SLA tiers, customs tariffs, and delay handling rules.</p>
-                    <p>Try one of the sample queries below, or type your own.</p>
+    <!-- Document Management Modal -->
+    <div class="modal" id="docModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Documents</h2>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="doc-list" id="docList">
+                    <!-- Documents will be loaded here -->
+                </div>
+                
+                <div class="add-doc-section">
+                    <h3>Add New Document</h3>
+                    <div class="add-doc-form">
+                        <div class="file-picker-wrapper">
+                            <input type="file" id="fileInput" accept=".md,.txt" style="display: none;" />
+                            <button class="btn-secondary" id="selectFileBtn">Choose File</button>
+                            <span id="selectedFileName" class="selected-file">No file selected</span>
+                        </div>
+                        <input type="text" id="newDocName" placeholder="Display Name (e.g., New Policy)" />
+                        <button class="btn-primary" id="addDocBtn">Add Document</button>
+                    </div>
+                    <p class="help-text">Select a .md or .txt file from your computer to add to the knowledge base.</p>
+                </div>
+                
+                <div class="reset-section">
+                    <button class="btn-danger" id="resetDocsBtn">Reset to Default Documents</button>
                 </div>
             </div>
-        </div>
-
-        <!-- Sample Queries -->
-        <div class="sample-queries">
-            <h3>Sample queries:</h3>
-            <div class="query-grid">
-                <button class="query-btn" data-query="What's the transit time from Mumbai to Hamburg for a Platinum shipment, including customs?">
-                    Mumbai → Hamburg transit time for Platinum, including customs?
-                </button>
-                <button class="query-btn" data-query="A Gold customer's shipment is 15 hours late. What compensation applies and what must we do?">
-                    Gold customer 15 hrs late — compensation & required actions?
-                </button>
-                <button class="query-btn" data-query="Can our agent autonomously cancel 5 shipments in a row?">
-                    Can our AI agent cancel 5 shipments in a row?
-                </button>
-                <button class="query-btn" data-query="What is the HS code and import duty for mobile phones?">
-                    HS code and import duty for mobile phones?
-                </button>
-                <button class="query-btn" data-query="What is the weather in Mumbai today?">
-                    What is the weather in Mumbai today?
-                </button>
-            </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="input-container">
-            <input 
-                type="text" 
-                id="userInput" 
-                placeholder="Ask about transit times, compensation, HS codes, or delay policies..."
-                autocomplete="off"
-            >
-            <button id="sendBtn" class="send-btn">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M2 10L18 2L10 18L8 11L2 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Send
-            </button>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            Answers are grounded in loaded documents only · No hallucinations · <span style="opacity: 0.6;">v1.0</span>
         </div>
     </div>
 

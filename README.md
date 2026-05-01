@@ -1,199 +1,42 @@
-# 🚀 GlobalFreight Smart Shipment Assistant
+# GlobalFreight AI Platform
 
-**AI-Fortnight 2026 - Intellithon Challenge Level 1**
+**AI-Fortnight 2026 - Unified Solution**
 
-A production-ready RAG (Retrieval-Augmented Generation) system that eliminates the 15-minute document hunt problem for logistics coordinators. Built with LangChain, ChromaDB, and a stunning black neon UI.
-
-![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
-![Python](https://img.shields.io/badge/python-3.8+-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+A single platform with two AI capabilities:
+- **Level 1**: RAG Assistant for policy Q&A
+- **Level 2**: Autonomous Exception Handler with safety guardrails
 
 ---
 
-## 🎯 The Problem
+## 🚀 Quick Start
 
-Logistics coordinators at GlobalFreight handle **hundreds of daily queries** but waste **10-15 minutes per question** hunting through three dense policy documents:
-
-- **Carrier SLA Agreement** (transit times, service tiers, compensation)
-- **Customs Tariff Reference** (HS codes, duties, restrictions)
-- **Shipment Delay Policy** (reason codes, escalation rules, AI autonomy)
-
-This leads to:
-- ❌ Errors and inconsistent answers
-- ❌ SLA disputes from wrong information
-- ❌ Missed customs deadlines
-- ❌ Occasionally made-up responses under pressure
-
----
-
-## ✨ The Solution
-
-An AI assistant that provides **grounded, instant answers** from policy documents with:
-
-✅ **Zero hallucinations** - Only answers from loaded documents  
-✅ **Multi-hop reasoning** - Combines info across all 3 documents  
-✅ **Source citations** - Shows which documents were used  
-✅ **Out-of-scope detection** - Refuses irrelevant questions  
-✅ **Production-ready** - Full error handling, logging, CORS  
-✅ **Beautiful UI** - Black neon theme (green/blue)  
-
----
-
-## 🎬 Quick Start
-
-### One-Command Setup
-
-**macOS/Linux:**
-```bash
-chmod +x run.sh && ./run.sh
-```
-
-**Windows:**
-```bash
-run.bat
-```
-
-The script will:
-1. ✅ Create virtual environment
-2. ✅ Install dependencies (LangChain, ChromaDB, Flask)
-3. ✅ Prompt for Azure OpenAI API key setup
-4. ✅ Start backend (port 5000) and frontend (port 8000)
-5. ✅ Open http://localhost:8000 in your browser
-
-### Manual Setup
+### Option 1: Automatic (Recommended)
 
 ```bash
-# 1. Install dependencies
-pip install -r requirements.txt
-
-# 2. Configure Azure OpenAI credentials
-# Copy .env.example to .env and update with your credentials
-cp .env.example .env
-# Edit .env with your Azure OpenAI API key
-
-# 3. Start backend
-python backend.py
-
-# 4. In new terminal, start frontend
-python -m http.server 8000
-
-# 5. Open browser
-open http://localhost:8000
+./start.sh
 ```
 
----
+This will:
+1. Start the backend server
+2. Start the frontend server
+3. Open your browser automatically
 
-## 📋 Requirements
+### Option 2: Manual
 
-- **Python 3.8+** (with pip)
-- **Azure OpenAI API Key** from Azure Portal
-- **Dependencies:** Listed in `requirements.txt`
-
-```txt
-langchain==0.1.0
-langchain-community==0.0.13
-langchain-openai==0.0.2
-chromadb==0.4.22
-flask==3.0.0
-flask-cors==4.0.0
-python-dotenv==1.0.0
-sentence-transformers==2.2.2
-```
-
-### Azure OpenAI Configuration
-
-**Endpoint:** `https://ai-fortnight.cognitiveservices.azure.com/`  
-**Deployment:** `gpt-5-nano`  
-**API Version:** `2024-12-01-preview`  
-
-Set these in your `.env` file:
+**Terminal 1 - Backend:**
 ```bash
-AZURE_OPENAI_API_KEY=your_key_here
-AZURE_OPENAI_ENDPOINT=https://ai-fortnight.cognitiveservices.azure.com/
-AZURE_OPENAI_DEPLOYMENT=gpt-5-nano
-AZURE_OPENAI_API_VERSION=2024-12-01-preview
+python3 backend.py
 ```
 
----
-
-## 🧪 Sample Queries (All Handled Correctly)
-
-### 1️⃣ Multi-hop Reasoning
-**Query:** *"What's the transit time from Mumbai to Hamburg for a Platinum shipment, including customs?"*
-
-**Answer:** Retrieves from SLA table (6 days) + EU customs clearance (1-2 days) = **7-8 business days total**
-
-### 2️⃣ Cross-Reference Logic
-**Query:** *"A Gold customer's shipment is 15 hours late. What compensation applies and what must we do?"*
-
-**Answer:** 
-- Gold tolerance: 12 hours (from SLA)
-- 15 hours = Category 2 delay (from Delay Policy)
-- Compensation: 10% refund per 24-hour block
-- Action: Proactive outreach not required (only for Platinum)
-
-### 3️⃣ Policy Lookup
-**Query:** *"Can our agent autonomously cancel 5 shipments in a row?"*
-
-**Answer:** **No.** Section 7 of Delay Policy limits autonomous cancellations to **max 3 per 10-minute window**. Beyond that requires Operations Director approval.
-
-### 4️⃣ Tariff Lookup
-**Query:** *"What is the HS code and import duty for mobile phones?"*
-
-**Answer:**
-- HS Code: **8517.12**
-- Import Duty: **22%**
-- Special Requirement: **IMEI registration mandatory**
-
-### 5️⃣ Out-of-Scope Rejection
-**Query:** *"What is the weather in Mumbai today?"*
-
-**Answer:** *"I can only answer questions about GlobalFreight policies, including transit times, service tiers, compensation rules, HS codes, customs duties, and delay handling procedures. Your question appears to be outside this scope."*
-
----
-
-## 🏗️ Architecture
-
-### Backend (`backend.py`)
-```
-Documents (3 MD files)
-    ↓
-Text Splitter (1000 chars, 200 overlap)
-    ↓
-HuggingFace Embeddings (local)
-    ↓
-ChromaDB Vector Store
-    ↓
-LangChain RetrievalQA Chain (Azure OpenAI)
-    ↓
-Flask REST API
+**Terminal 2 - Frontend:**
+```bash
+python3 -m http.server 8000
 ```
 
-**Key Features:**
-- Loads 3 policy documents on startup
-- Creates semantic embeddings for similarity search
-- Custom prompt template for grounded responses
-- Retrieves top 6 relevant chunks per query
-- Returns answer + source citations
-
-### Frontend (`app.js` + `index.html`)
+**Browser:**
 ```
-User Query
-    ↓
-POST /query to Backend
-    ↓
-Display Answer + Sources
-    ↓
-Black Neon UI with Animations
+http://localhost:8000/index.html
 ```
-
-**Key Features:**
-- Health check on load (verifies backend connection)
-- Real-time status indicator
-- Sample query quick-access buttons
-- Source document citations
-- Responsive design (mobile-friendly)
-- Smooth animations and transitions
 
 ---
 
@@ -201,191 +44,216 @@ Black Neon UI with Animations
 
 ```
 .
-├── backend.py                          # Flask API with RAG pipeline
-├── app.js                              # Frontend JavaScript
-├── index.html                          # Main UI
-├── styles.css                          # Black neon styling
-├── requirements.txt                    # Python dependencies
-├── .env                                # Your API key (create this)
-├── .env.example                        # Template
-├── run.sh                              # Linux/Mac startup script
-├── run.bat                             # Windows startup script
-├── README.md                           # This file
-├── DOC1-carrier-sla-agreement.md       # Policy document 1
-├── DOC2-customs-tariff-reference.md    # Policy document 2
-├── DOC3-shipment-delay-policy.md       # Policy document 3
-└── docs/                               # Additional documentation
-    ├── DEMO_SCRIPT.md
-    ├── PROJECT_SUMMARY.md
-    ├── TESTING_CHECKLIST.md
-    └── DOCUMENT_MANAGEMENT.md
+├── index.html              # Main UI with tab navigation
+├── app.js                  # Frontend logic
+├── styles.css              # Styling
+├── backend.py              # Flask + LangChain backend
+├── requirements.txt        # Python dependencies
+├── start.sh                # Startup script
+├── .env                    # API keys (create from .env.example)
+├── .env.example            # Environment template
+│
+├── data/                   # Data files
+│   ├── DOC1-carrier-sla-agreement.md
+│   ├── DOC2-customs-tariff-reference.md
+│   ├── DOC3-shipment-delay-policy.md
+│   └── Version2/
+│       └── event_stream.json    # 20 logistics events
+│
+└── docs/                   # Documentation
+    ├── HOW_TO_RUN.md
+    ├── TROUBLESHOOTING.md
+    └── SYSTEM_STATUS.md
 ```
 
 ---
 
-## 🎨 UI Features
+## 🎯 Features
 
-- **Black Neon Theme:** Dark background with green (#00ff88) and blue (#00d4ff) accents
-- **Glowing Effects:** Neon shadows on interactive elements
-- **Status Indicator:** Real-time backend connection status
-- **Document Pills:** Shows all 3 loaded documents
-- **Chat Interface:** Clean message bubbles with avatars
-- **Source Citations:** Shows which documents answered the query
-- **Sample Queries:** One-click access to test questions
-- **Responsive:** Works on desktop, tablet, mobile
-- **Smooth Animations:** Fade-in messages, hover effects
+### Level 1: RAG Assistant 💬
+- Grounded Q&A from policy documents
+- Document management (add/remove)
+- No hallucinations
+- Fast responses (1-3 seconds)
+
+### Level 2: Exception Handler ⚡
+- Autonomous event processing
+- 10 AI agent tools
+- Safety guardrails (cancellation limits)
+- Full audit logging
+- Context-aware decisions
 
 ---
 
-## 🔧 API Endpoints
+## 🔧 Setup
 
-### `GET /health`
-Health check and system status
+### 1. Install Dependencies
 
-**Response:**
-```json
-{
-  "status": "healthy",
-  "documents_loaded": 3,
-  "vectorstore_initialized": true
-}
+```bash
+pip install -r requirements.txt
 ```
 
-### `POST /query`
-Submit a question to the assistant
+### 2. Configure API Key
 
-**Request:**
-```json
-{
-  "question": "What's the transit time for Mumbai to Hamburg?"
-}
+```bash
+cp .env.example .env
 ```
 
-**Response:**
-```json
-{
-  "answer": "For Platinum shipments from Mumbai to Hamburg, the transit time is 6 business days according to the route-specific table. Additionally, you should add 1-2 business days for EU customs clearance, bringing the total to 7-8 business days.",
-  "sources": [
-    {
-      "document": "Carrier SLA Agreement",
-      "source": "DOC1-carrier-sla-agreement.md"
-    }
-  ]
-}
+Edit `.env` and add your Azure OpenAI key:
+```
+AZURE_OPENAI_API_KEY=your_key_here
 ```
 
-### `GET /sample-queries`
-Get the 5 sample queries from the challenge
+### 3. Start Platform
 
-**Response:**
-```json
-{
-  "queries": [
-    "What's the transit time from Mumbai to Hamburg for a Platinum shipment, including customs?",
-    "A Gold customer's shipment is 15 hours late. What compensation applies and what must we do?",
-    "Can our agent autonomously cancel 5 shipments in a row?",
-    "What is the HS code and import duty for mobile phones?",
-    "What is the weather in Mumbai today?"
-  ]
-}
+```bash
+./start.sh
 ```
 
 ---
 
-## 🐛 Troubleshooting
+## 🎮 Usage
 
-### Backend won't start
-- Check Python version: `python --version` (need 3.8+)
-- Verify API key in `.env` file
-- Install dependencies: `pip install -r requirements.txt`
+### Switch Between Levels
 
-### Frontend can't connect
-- Ensure backend is running on port 5000
-- Check browser console for errors (F12)
-- Verify CORS is enabled in backend
+The interface has two tabs:
+- **Level 1: RAG Assistant** - Ask questions about policies
+- **Level 2: Exception Handler** - Process logistics events
 
-### "Documents not found" error
-- Ensure DOC1, DOC2, DOC3 files are in same directory as `backend.py`
-- Check file names match exactly (case-sensitive)
+### Level 1 Examples
 
-### API errors
-- Verify `AZURE_OPENAI_API_KEY` is correct in `.env`
-- Check Azure OpenAI endpoint is accessible
-- Review backend logs in terminal
-- Ensure deployment name matches: `gpt-5-nano`
+Try these questions:
+- "What's the transit time from Mumbai to Hamburg for Platinum?"
+- "A Gold customer is 15 hours late. What compensation applies?"
+- "What is the HS code for mobile phones?"
 
----
+### Level 2 Examples
 
-## 🎯 Challenge Requirements ✅
-
-| Requirement | Status | Implementation |
-|-------------|--------|----------------|
-| Use LangChain | ✅ | `langchain.chains.RetrievalQA` |
-| Use ChromaDB | ✅ | `langchain_community.vectorstores.Chroma` |
-| Use OpenAI-compatible API | ✅ | Azure OpenAI via `langchain_openai` |
-| Load 3 documents | ✅ | All 3 MD files loaded on startup |
-| Multi-hop reasoning | ✅ | Retrieves from multiple docs |
-| Grounded answers only | ✅ | Custom prompt enforces grounding |
-| Refuse out-of-scope | ✅ | Detects and declines cleanly |
-| Handle all 5 sample queries | ✅ | Tested and verified |
-| No hallucinations | ✅ | Temperature 0.1, strict prompting |
+1. Select an event (EVT-001 to EVT-020)
+2. Click "Process Event"
+3. Wait 10-40 seconds
+4. View agent's response and actions
 
 ---
 
-## 🚀 Production Features
+## 📊 Performance
 
-- ✅ **Error Handling:** Try-catch blocks, graceful failures
-- ✅ **Logging:** Console logs for debugging
-- ✅ **CORS:** Enabled for cross-origin requests
-- ✅ **Health Checks:** Backend status monitoring
-- ✅ **Environment Variables:** Secure API key management
-- ✅ **Responsive UI:** Mobile-friendly design
-- ✅ **Source Citations:** Transparency in answers
-- ✅ **Loading States:** User feedback during processing
-- ✅ **Input Validation:** Prevents empty queries
-- ✅ **Startup Scripts:** One-command deployment
+| Level | Operation | Time |
+|-------|-----------|------|
+| Level 1 | Simple query | 1-2s |
+| Level 1 | Complex query | 2-3s |
+| Level 2 | Quick test | <1s |
+| Level 2 | Simple event | 10-20s |
+| Level 2 | Complex event | 30-40s |
+
+---
+
+## 🛠️ Troubleshooting
+
+### Backend not starting?
+```bash
+# Check if port 5001 is in use
+lsof -i :5001
+
+# Kill if needed
+kill $(lsof -t -i:5001)
+
+# Restart
+python3 backend.py
+```
+
+### Frontend not loading?
+```bash
+# Check if port 8000 is in use
+lsof -i :8000
+
+# Start server
+python3 -m http.server 8000
+```
+
+### Page shows "Offline"?
+- Hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
+- Check `.env` file has valid API key
+- Verify both servers are running
+
+See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for more help.
 
 ---
 
 ## 📚 Documentation
 
-- **README.md** - Main documentation (this file)
-- **docs/PROJECT_SUMMARY.md** - Project overview and deliverables
-- **docs/DEMO_SCRIPT.md** - Demo walkthrough script
-- **docs/TESTING_CHECKLIST.md** - Testing guide
-- **Code Comments** - Inline documentation in all files
+- **[docs/HOW_TO_RUN.md](docs/HOW_TO_RUN.md)** - Detailed setup guide
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues
+- **[docs/SYSTEM_STATUS.md](docs/SYSTEM_STATUS.md)** - System status
 
 ---
 
-## 🏆 Hackathon Ready
+## 🏗️ Architecture
 
-This solution is **100% complete** and ready for demo:
+### Backend
+- **Flask** - Web server
+- **LangChain** - RAG & Agent framework
+- **ChromaDB** - Vector store
+- **Azure OpenAI** - LLM
 
-1. ✅ Follows README requirements exactly
-2. ✅ Uses specified tech stack (LangChain, ChromaDB, OpenAI)
-3. ✅ Handles all 5 sample queries correctly
-4. ✅ Production-quality code with error handling
-5. ✅ Beautiful, professional UI
-6. ✅ Complete documentation
-7. ✅ Easy one-command setup
-8. ✅ Zero hallucinations (grounded only)
-
----
-
-## 📝 License
-
-Built for **AI-Fortnight 2026 - Intellithon Challenge Level 1**
+### Frontend
+- **Vanilla JavaScript** - No frameworks
+- **Tab navigation** - Switch between levels
+- **Responsive design** - Modern UI
 
 ---
 
-## 🙋 Support
+## 🔐 Security
 
-For issues or questions:
-1. Check **SETUP.md** for detailed instructions
-2. Review **Troubleshooting** section above
-3. Check backend logs in terminal
-4. Verify Azure OpenAI API key is correct in `.env`
+- API keys in `.env` (not committed to git)
+- CORS enabled for localhost only
+- Input validation on all endpoints
+- Safety guardrails for agent actions
 
 ---
 
-**Made with ⚡ by Team GlobalFreight**
+## 📝 Requirements
+
+- Python 3.8+
+- Azure OpenAI API key
+- 2GB RAM minimum
+- Modern web browser
+
+---
+
+## 🤝 Support
+
+**Quick checks:**
+```bash
+# Test backend
+curl http://localhost:5001/health
+
+# Test Level 1
+curl -X POST http://localhost:5001/query \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is the SLA for Platinum?"}'
+
+# Test Level 2
+curl -X POST http://localhost:5001/test-simple \
+  -H "Content-Type: application/json" \
+  -d '{"event_id":"TEST"}'
+```
+
+**Need help?**
+- Check [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- Verify `.env` configuration
+- Ensure both servers are running
+
+---
+
+## 🎉 Ready to Go!
+
+```bash
+./start.sh
+```
+
+Then open: **http://localhost:8000/index.html**
+
+---
+
+**Built for AI-Fortnight 2026** 🚀
