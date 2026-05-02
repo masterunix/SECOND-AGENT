@@ -65,7 +65,7 @@ const severityColors = {
 
 export default function EventList({ events, currentIndex, onSelectEvent }: EventListProps) {
   return (
-    <div className="max-h-[70vh] overflow-y-auto space-y-3 pr-2">
+    <div className="space-y-3">
       {events.map((event, index) => {
         const severity = assessSeverity(event);
         const colors = severityColors[severity];

@@ -12,9 +12,10 @@ interface Message {
 
 interface ChatContainerProps {
   messages: Message[];
+  loading?: boolean;
 }
 
-export default function ChatContainer({ messages }: ChatContainerProps) {
+export default function ChatContainer({ messages, loading }: ChatContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,6 +57,40 @@ export default function ChatContainer({ messages }: ChatContainerProps) {
               </div>
             </motion.div>
           ))}
+          
+          {/* Loading Indicator */}
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="flex gap-4"
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold flex-shrink-0 bg-gradient-to-br from-neon-green to-neon-blue text-black shadow-neon-green">
+                GF
+              </div>
+              <div className="flex-1 flex items-center gap-2">
+                <div className="flex gap-1">
+                  <motion.div
+                    className="w-2 h-2 bg-neon-green rounded-full"
+                    animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+                  />
+                  <motion.div
+                    className="w-2 h-2 bg-neon-green rounded-full"
+                    animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                  />
+                  <motion.div
+                    className="w-2 h-2 bg-neon-green rounded-full"
+                    animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                  />
+                </div>
+                <span className="text-sm text-white/60">Thinking...</span>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </GlassCard>

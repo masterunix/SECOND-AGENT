@@ -1,259 +1,245 @@
 # GlobalFreight AI Platform
 
-**AI-Fortnight 2026 - Unified Solution**
-
-A single platform with two AI capabilities:
-- **Level 1**: RAG Assistant for policy Q&A
-- **Level 2**: Autonomous Exception Handler with safety guardrails
+> **AI-Fortnight 2026 — Intellithon Challenge**
+> A full-stack AI logistics platform with RAG-powered document querying (Level 1) and autonomous exception handling (Level 2).
 
 ---
 
-## 🚀 Quick Start
+## Features
 
-### Option 1: Automatic (Recommended)
+### Level 1 — RAG Shipment Assistant
+- Chat interface powered by retrieval-augmented generation (RAG)
+- Queries 3 policy documents: Carrier SLA, Customs Tariff, Shipment Delay Policy
+- Upload custom documents to expand the knowledge base
+- Source attribution for every answer
 
-```bash
-./start.sh
-```
+### Level 2 — Exception Handler Agent
+- Processes a **20-event logistics disruption stream** autonomously
+- AI agent classifies severity (CRITICAL / HIGH / MEDIUM / LOW) per event
+- **10 agent tools**: notify customer, escalate, flag customs, arrange routing, apply compensation, request cancellation, update ETA, query policy, get shipment history, log decision
+- **Safety guardrail**: blocks the 3rd cancellation in any 10-minute window and escalates to Operations Manager
+- **Context awareness**: remembers shipment history across events (e.g., EVT-001 → EVT-008)
+- **Live audit logs** with color-coded entries by action type and severity
+- **JSON file upload** to load custom event streams
 
-This will:
-1. Start the backend server
-2. Start the frontend server
-3. Open your browser automatically
+### Multi-Provider AI
+Switch between **3 LLM providers** from the header dropdown — applies to both Level 1 and Level 2:
 
-### Option 2: Manual
+| Provider | Model | Use Case |
+|---|---|---|
+| Azure OpenAI | gpt-5-nano | Primary (tool-calling agent) |
+| Gemini | 2.5 Flash | Fast fallback |
+| PAI | gemma4:26b | Challenge-specified endpoint |
 
-**Terminal 1 - Backend:**
-```bash
-python3 backend.py
-```
-
-**Terminal 2 - Frontend:**
-```bash
-python3 -m http.server 8000
-```
-
-**Browser:**
-```
-http://localhost:8000/index.html
-```
+Automatic fallback chain: if the selected provider fails, the system tries the others.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-.
-├── index.html              # Main UI with tab navigation
-├── app.js                  # Frontend logic
-├── styles.css              # Styling
-├── backend.py              # Flask + LangChain backend
+├── backend.py              # Flask API server (Level 1 + Level 2)
 ├── requirements.txt        # Python dependencies
-├── start.sh                # Startup script
-├── .env                    # API keys (create from .env.example)
-├── .env.example            # Environment template
-│
-├── data/                   # Data files
-│   ├── DOC1-carrier-sla-agreement.md
-│   ├── DOC2-customs-tariff-reference.md
-│   ├── DOC3-shipment-delay-policy.md
-│   └── Version2/
-│       └── event_stream.json    # 20 logistics events
-│
-└── docs/                   # Documentation
-    ├── HOW_TO_RUN.md
-    ├── TROUBLESHOOTING.md
-    └── SYSTEM_STATUS.md
+├── .env                    # API keys (gitignored)
+├── .env.example            # Template for API keys
+├── data/                   # Policy documents (DOC1, DOC2, DOC3)
+├── frontend/               # Next.js 16 frontend
+│   ├── app/                # App router (page.tsx)
+│   ├── components/
+│   │   ├── Header.tsx      # Top bar with model dropdown
+│   │   ├── TabSwitcher.tsx # Level 1 / Level 2 tabs
+│   │   ├── Level1/         # RAG assistant UI
+│   │   └── Level2/         # Exception handler UI
+│   └── public/data/        # Event stream JSON
+├── LEVEL2/                 # Challenge spec (README + event_stream.json) — DO NOT MODIFY
+└── LEVEL3FILES/            # Level 3 challenge files
 ```
 
 ---
 
-## 🎯 Features
+## Prerequisites
 
-### Level 1: RAG Assistant 💬
-- Grounded Q&A from policy documents
-- Document management (add/remove)
-- No hallucinations
-- Fast responses (1-3 seconds)
-
-### Level 2: Exception Handler ⚡
-- Autonomous event processing
-- 10 AI agent tools
-- Safety guardrails (cancellation limits)
-- Full audit logging
-- Context-aware decisions
+| Tool | Version | Check |
+|---|---|---|
+| Python | 3.9+ | `python3 --version` |
+| Node.js | 18+ | `node --version` |
+| npm | 9+ | `npm --version` |
 
 ---
 
-## 🔧 Setup
+## Setup — macOS
 
-### 1. Install Dependencies
+### 1. Clone & enter the project
 
 ```bash
+cd ~/Desktop/SECOND\ AGENT
+```
+
+### 2. Create Python virtual environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure API Key
+### 3. Configure API keys
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add your Azure OpenAI key:
-```
-AZURE_OPENAI_API_KEY=your_key_here
+Edit `.env` and fill in your keys:
+
+```env
+AZURE_OPENAI_API_KEY=your_azure_key
+AZURE_OPENAI_ENDPOINT=https://ai-fortnight.cognitiveservices.azure.com/
+AZURE_OPENAI_DEPLOYMENT=gpt-5-nano
+AZURE_OPENAI_API_VERSION=2024-12-01-preview
+GEMINI_API_KEY=your_gemini_key
+PAI_API_KEY=your_pai_key
 ```
 
-### 3. Start Platform
+### 4. Start the backend
 
 ```bash
-./start.sh
+source .venv/bin/activate
+python backend.py
 ```
 
----
-
-## 🎮 Usage
-
-### Switch Between Levels
-
-The interface has two tabs:
-- **Level 1: RAG Assistant** - Ask questions about policies
-- **Level 2: Exception Handler** - Process logistics events
-
-### Level 1 Examples
-
-Try these questions:
-- "What's the transit time from Mumbai to Hamburg for Platinum?"
-- "A Gold customer is 15 hours late. What compensation applies?"
-- "What is the HS code for mobile phones?"
-
-### Level 2 Examples
-
-1. Select an event (EVT-001 to EVT-020)
-2. Click "Process Event"
-3. Wait 10-40 seconds
-4. View agent's response and actions
-
----
-
-## 📊 Performance
-
-| Level | Operation | Time |
-|-------|-----------|------|
-| Level 1 | Simple query | 1-2s |
-| Level 1 | Complex query | 2-3s |
-| Level 2 | Quick test | <1s |
-| Level 2 | Simple event | 10-20s |
-| Level 2 | Complex event | 30-40s |
-
----
-
-## 🛠️ Troubleshooting
-
-### Backend not starting?
-```bash
-# Check if port 5001 is in use
-lsof -i :5001
-
-# Kill if needed
-kill $(lsof -t -i:5001)
-
-# Restart
-python3 backend.py
+You should see:
+```
+GlobalFreight AI Platform v2.0-combined
+ * Running on http://127.0.0.1:5001
 ```
 
-### Frontend not loading?
-```bash
-# Check if port 8000 is in use
-lsof -i :8000
-
-# Start server
-python3 -m http.server 8000
-```
-
-### Page shows "Offline"?
-- Hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
-- Check `.env` file has valid API key
-- Verify both servers are running
-
-See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for more help.
-
----
-
-## 📚 Documentation
-
-- **[docs/HOW_TO_RUN.md](docs/HOW_TO_RUN.md)** - Detailed setup guide
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues
-- **[docs/SYSTEM_STATUS.md](docs/SYSTEM_STATUS.md)** - System status
-
----
-
-## 🏗️ Architecture
-
-### Backend
-- **Flask** - Web server
-- **LangChain** - RAG & Agent framework
-- **ChromaDB** - Vector store
-- **Azure OpenAI** - LLM
-
-### Frontend
-- **Vanilla JavaScript** - No frameworks
-- **Tab navigation** - Switch between levels
-- **Responsive design** - Modern UI
-
----
-
-## 🔐 Security
-
-- API keys in `.env` (not committed to git)
-- CORS enabled for localhost only
-- Input validation on all endpoints
-- Safety guardrails for agent actions
-
----
-
-## 📝 Requirements
-
-- Python 3.8+
-- Azure OpenAI API key
-- 2GB RAM minimum
-- Modern web browser
-
----
-
-## 🤝 Support
-
-**Quick checks:**
-```bash
-# Test backend
-curl http://localhost:5001/health
-
-# Test Level 1
-curl -X POST http://localhost:5001/query \
-  -H "Content-Type: application/json" \
-  -d '{"question":"What is the SLA for Platinum?"}'
-
-# Test Level 2
-curl -X POST http://localhost:5001/test-simple \
-  -H "Content-Type: application/json" \
-  -d '{"event_id":"TEST"}'
-```
-
-**Need help?**
-- Check [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-- Verify `.env` configuration
-- Ensure both servers are running
-
----
-
-## 🎉 Ready to Go!
+### 5. Start the frontend (new terminal)
 
 ```bash
-./start.sh
+cd frontend
+npm install
+npm run dev
 ```
 
-Then open: **http://localhost:8000/index.html**
+### 6. Open the app
+
+Navigate to **http://localhost:3000** in your browser.
 
 ---
 
-**Built for AI-Fortnight 2026** 🚀
+## Setup — Windows
+
+### 1. Open PowerShell and navigate to the project
+
+```powershell
+cd "$env:USERPROFILE\Desktop\SECOND AGENT"
+```
+
+### 2. Create Python virtual environment
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+> **Note:** If you get an execution policy error, run:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+### 3. Configure API keys
+
+```powershell
+copy .env.example .env
+```
+
+Edit `.env` with Notepad or VS Code:
+
+```powershell
+notepad .env
+```
+
+Fill in the same keys as shown in the macOS section above.
+
+### 4. Start the backend
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python backend.py
+```
+
+### 5. Start the frontend (new PowerShell window)
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+### 6. Open the app
+
+Navigate to **http://localhost:3000** in your browser.
+
+---
+
+## API Endpoints
+
+### Health & Config
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Server health check |
+| GET | `/get-provider` | Get active LLM provider |
+| POST | `/set-provider` | Switch provider (`{"provider": "gemini"}`) |
+
+### Level 1 — RAG
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/query` | Ask a question (`{"question": "..."}`) |
+| GET | `/documents` | List loaded documents |
+| POST | `/documents/add` | Add a document |
+| POST | `/documents/remove` | Remove a document |
+| POST | `/documents/reset` | Reset to default documents |
+
+### Level 2 — Exception Handler
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/process-event` | Process a single event |
+| GET | `/audit-log` | Get all audit log entries |
+| POST | `/audit-log/clear` | Clear the audit log |
+| GET | `/guardrail-status` | Check cancellation guardrail |
+| POST | `/test-simple` | Simple connectivity test |
+
+---
+
+## The Critical Guardrail
+
+> No agent — human or AI — may cancel more than 3 shipments in any 10-minute window.
+
+Events **EVT-011**, **EVT-016**, and **EVT-018** are cancellation requests. On the 3rd one (EVT-018), the agent **must** detect the breach, pause, and escalate to the Operations Manager.
+
+This is enforced at **two levels**:
+1. **Frontend**: Tracks cancellation timestamps client-side and blocks the 3rd request
+2. **Backend**: The `request_cancellation_approval` tool checks the server-side counter
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|---|---|
+| `ImportError: AgentExecutor` | Ensure `langchain-classic` is installed: `pip install langchain-classic` |
+| Backend won't start | Check `.env` has a valid `AZURE_OPENAI_API_KEY` |
+| Frontend shows "Failed to fetch" | Make sure backend is running on port 5001 |
+| PAI returns gibberish | Fixed — PAI streams accumulated text, backend takes only the last entry |
+| Gemini 404 error | Uses `gemini-2.5-flash` (2.0-flash is deprecated) |
+| Port 5001 already in use | Kill it: `lsof -ti:5001 \| xargs kill -9` (macOS) or `netstat -ano \| findstr :5001` (Windows) |
+
+---
+
+## Tech Stack
+
+- **Backend**: Python 3.11, Flask, LangChain, ChromaDB, HuggingFace Embeddings
+- **Frontend**: Next.js 16 (Turbopack), React 19, TypeScript, Framer Motion, Tailwind CSS
+- **LLMs**: Azure OpenAI (gpt-5-nano), Google Gemini 2.5 Flash, PAI (gemma4:26b)
+- **Embeddings**: sentence-transformers/all-MiniLM-L6-v2 (local, no API needed)

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/components/Header';
 import TabSwitcher from '@/components/TabSwitcher';
 import Level1 from '@/components/Level1/Level1';
-import Level2 from '@/components/Level2/Level2';
+import Level2Enhanced from '@/components/Level2/Level2Enhanced';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'level1' | 'level2'>('level1');
@@ -24,7 +24,7 @@ export default function Home() {
           transition={{ duration: 0.4 }}
           className="relative z-10"
         >
-          {activeTab === 'level1' ? <Level1 /> : <Level2 />}
+          {activeTab === 'level1' ? <Level1 /> : <Level2Enhanced />}
         </motion.div>
       </AnimatePresence>
     </main>

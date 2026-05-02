@@ -95,8 +95,8 @@ export default function Level2() {
               <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-neon-green to-neon-blue relative overflow-hidden"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${((currentIndex + 1) / events.length) * 100}%` }}
+                  initial={{ width: '0%' }}
+                  animate={{ width: events.length > 0 ? `${((currentIndex + 1) / events.length) * 100}%` : '0%' }}
                   transition={{ duration: 0.4 }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />

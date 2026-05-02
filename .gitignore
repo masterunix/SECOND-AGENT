@@ -31,9 +31,16 @@ wheels/
 chroma_db/
 *.db
 
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+
 # IDE
 .vscode/
 .idea/
+.kiro/
 *.swp
 *.swo
 *~

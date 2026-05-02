@@ -8,6 +8,7 @@ __version__ = "2.0-combined"
 
 import os
 import json
+import requests as http_requests
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
@@ -24,7 +25,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
 # Agent imports (Level 2)
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.tools import tool
 
 # Load environment variables
@@ -38,6 +39,8 @@ AZURE_OPENAI_API_KEY = os.getenv('AZURE_OPENAI_API_KEY')
 AZURE_OPENAI_ENDPOINT = os.getenv('AZURE_OPENAI_ENDPOINT', 'https://ai-fortnight.cognitiveservices.azure.com/')
 AZURE_OPENAI_DEPLOYMENT = os.getenv('AZURE_OPENAI_DEPLOYMENT', 'gpt-5-nano')
 AZURE_OPENAI_API_VERSION = os.getenv('AZURE_OPENAI_API_VERSION', '2024-12-01-preview')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+PAI_API_KEY = os.getenv('PAI_API_KEY', '')
 
 if not AZURE_OPENAI_API_KEY:
     raise ValueError("AZURE_OPENAI_API_KEY not found in environment variables")
@@ -67,6 +70,7 @@ audit_log = []
 cancellation_tracker = []
 shipment_context = {}
 query_cache = {}
+active_provider = 'azure'  # 'azure' | 'gemini' | 'pai'
 
 # ============================================================================
 # LEVEL 1: RAG ASSISTANT
@@ -319,18 +323,16 @@ def create_exception_agent():
         ("system", """You are the GlobalFreight Exception Handler AI Agent. Process events quickly and safely.
 
 WORKFLOW:
-1. Check shipment history (if needed)
-2. Query policy ONCE for key rules
-3. Assess severity: CRITICAL | HIGH | MEDIUM | LOW
-4. Log decision
-5. Take action
+1. Assess severity: CRITICAL | HIGH | MEDIUM | LOW
+2. Decide action and call appropriate tools IMMEDIATELY.
+3. Call log_decision tool last.
 
 CRITICAL GUARDRAIL: Max 3 cancellations per 10 minutes
 
 ESCALATE: Pharma/medical >2h, Perishables >4h, Cancellations, Regulatory issues
 AUTO-RESOLVE: Minor delays, Routine updates, Standard compensation
 
-Be concise. Take action quickly."""),
+CRITICAL OPTIMIZATION: You must process this event in EXACTLY ONE turn. Make all necessary tool calls simultaneously, then provide your final concise response immediately."""),
         MessagesPlaceholder(variable_name="chat_history", optional=True),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad")
@@ -341,10 +343,10 @@ Be concise. Take action quickly."""),
         agent=agent,
         tools=tools,
         verbose=False,
-        max_iterations=8,
+        max_iterations=3, # Reduced to force faster completion
         handle_parsing_errors=True,
         return_intermediate_steps=False,
-        max_execution_time=40
+        max_execution_time=20 # Reduced from 40 to fail-fast
     )
     
     return agent_executor
@@ -379,15 +381,16 @@ def health():
 
 @app.route('/query', methods=['POST'])
 def query():
-    """Level 1: RAG query endpoint"""
+    """Level 1: RAG query endpoint — respects active_provider"""
     try:
         data = request.json
         question = data.get('question', '').strip()
         if not question:
             return jsonify({'error': 'Question is required'}), 400
         
-        answer = qa_chain.invoke(question)
+        # Always use vectorstore for retrieval
         source_docs = retriever.invoke(question)
+        context = "\n\n".join(doc.page_content for doc in source_docs)
         
         sources = []
         seen = set()
@@ -400,9 +403,60 @@ def query():
                     'source': doc.metadata.get('source', 'Unknown')
                 })
         
+        rag_system_prompt = f"""You are the GlobalFreight Shipment Assistant. Answer ONLY from the context below.
+
+RULES:
+1. Answer ONLY from provided context
+2. If question is out-of-scope, respond: "I can only answer questions about GlobalFreight policies."
+3. Be precise and concise
+4. Never hallucinate
+
+Context:
+{context}"""
+
+        provider_used = active_provider
+        answer = ""
+        
+        if active_provider == 'azure':
+            try:
+                answer = qa_chain.invoke(question)
+            except Exception as azure_err:
+                print(f"Azure RAG failed: {azure_err}")
+                answer = _try_gemini(rag_system_prompt, f"Question: {question}\n\nAnswer:", "RAG")
+                if not answer:
+                    answer = _try_pai(rag_system_prompt, f"Question: {question}\n\nAnswer:", "RAG")
+                    provider_used = 'pai' if answer else 'timeout'
+                else:
+                    provider_used = 'gemini'
+                if not answer:
+                    answer = "All providers failed. Please try again later."
+        elif active_provider == 'gemini':
+            answer = _try_gemini(rag_system_prompt, f"Question: {question}\n\nAnswer:", "RAG")
+            if not answer:
+                try:
+                    answer = qa_chain.invoke(question)
+                    provider_used = 'azure'
+                except:
+                    answer = _try_pai(rag_system_prompt, f"Question: {question}\n\nAnswer:", "RAG")
+                    provider_used = 'pai' if answer else 'timeout'
+            if not answer:
+                answer = "All providers failed. Please try again later."
+        elif active_provider == 'pai':
+            answer = _try_pai(rag_system_prompt, f"Question: {question}\n\nAnswer:", "RAG")
+            if not answer:
+                try:
+                    answer = qa_chain.invoke(question)
+                    provider_used = 'azure'
+                except:
+                    answer = _try_gemini(rag_system_prompt, f"Question: {question}\n\nAnswer:", "RAG")
+                    provider_used = 'gemini' if answer else 'timeout'
+            if not answer:
+                answer = "All providers failed. Please try again later."
+        
         return jsonify({
             'answer': answer,
-            'sources': sources[:3]
+            'sources': sources[:3],
+            'provider': provider_used
         })
     except Exception as e:
         print(f"Error processing query: {str(e)}")
@@ -531,35 +585,117 @@ TASK: Assess, decide, act. Be efficient.
 """
         
         start_time = datetime.now()
-        try:
-            result = agent_executor.invoke({"input": event_description})
-            duration = (datetime.now() - start_time).total_seconds()
-            
-            return jsonify({
+        agent_response = ""
+        provider_used = active_provider
+        
+        system_prompt = """You are the GlobalFreight Exception Handler AI Agent. Process this logistics event.
+
+For each event:
+1. Assess severity: CRITICAL | HIGH | MEDIUM | LOW
+2. Decide action: auto-resolve OR escalate to human
+3. Take action: notify customer, flag customs, arrange routing, escalate
+4. Log your decision with reasoning
+
+CRITICAL GUARDRAIL: Max 3 cancellations per 10 minutes. On the 3rd, STOP and escalate.
+ESCALATE: Pharma/medical >2h, Perishables >4h, Cancellation requests, Regulatory issues
+AUTO-RESOLVE: Minor delays <2h, Routine updates, Standard compensation
+
+Respond concisely with: SEVERITY | ACTION TAKEN | REASONING"""
+
+        # === PRIMARY: Use active provider ===
+        if active_provider == 'azure':
+            try:
+                result = agent_executor.invoke({"input": event_description})
+                agent_response = result['output']
+            except Exception as azure_err:
+                print(f"Azure OpenAI failed: {azure_err}")
+                # Try Gemini fallback
+                agent_response = _try_gemini(system_prompt, event_description, event_id)
+                if not agent_response:
+                    agent_response = _try_pai(system_prompt, event_description, event_id)
+                if not agent_response:
+                    provider_used = 'timeout'
+                    agent_response = f"All providers failed. Azure error: {str(azure_err)[:100]}"
+                else:
+                    provider_used = 'gemini' if GEMINI_API_KEY else 'pai'
+        
+        elif active_provider == 'gemini':
+            agent_response = _try_gemini(system_prompt, event_description, event_id)
+            if not agent_response:
+                # Fallback to Azure
+                try:
+                    result = agent_executor.invoke({"input": event_description})
+                    agent_response = result['output']
+                    provider_used = 'azure'
+                except:
+                    agent_response = _try_pai(system_prompt, event_description, event_id)
+                    provider_used = 'pai' if agent_response else 'timeout'
+                    if not agent_response:
+                        agent_response = "All providers failed."
+        
+        elif active_provider == 'pai':
+            agent_response = _try_pai(system_prompt, event_description, event_id)
+            if not agent_response:
+                # Fallback to Azure
+                try:
+                    result = agent_executor.invoke({"input": event_description})
+                    agent_response = result['output']
+                    provider_used = 'azure'
+                except:
+                    agent_response = _try_gemini(system_prompt, event_description, event_id)
+                    provider_used = 'gemini' if agent_response else 'timeout'
+                    if not agent_response:
+                        agent_response = "All providers failed."
+
+        duration = (datetime.now() - start_time).total_seconds()
+        
+        # Auto-log the decision if not using the agent (which logs via tools)
+        if provider_used != 'azure':
+            audit_log.append({
+                'action': 'log_decision',
                 'event_id': event_id,
-                'shipment_id': shipment_id,
-                'agent_response': result['output'],
-                'actions_taken': len([log for log in audit_log if log.get('action') != 'log_decision']),
-                'duration': f"{duration:.1f}",
+                'decision': f'Processed via {provider_used}',
+                'reasoning': f'Provider: {provider_used} | Duration: {duration:.1f}s',
+                'severity': 'MEDIUM',
                 'timestamp': datetime.now().isoformat()
             })
-        except Exception as agent_error:
-            duration = (datetime.now() - start_time).total_seconds()
-            if "timeout" in str(agent_error).lower() or duration > 40:
-                return jsonify({
-                    'event_id': event_id,
-                    'shipment_id': shipment_id,
-                    'agent_response': f"Processing timed out after {duration:.1f}s.",
-                    'actions_taken': len([log for log in audit_log if log.get('action') != 'log_decision']),
-                    'duration': f"{duration:.1f}",
-                    'timestamp': datetime.now().isoformat(),
-                    'warning': 'timeout'
-                })
-            else:
-                raise
+        
+        return jsonify({
+            'event_id': event_id,
+            'shipment_id': shipment_id,
+            'agent_response': agent_response,
+            'actions_taken': len([log for log in audit_log if log.get('action') != 'log_decision']),
+            'duration': f"{duration:.1f}",
+            'timestamp': datetime.now().isoformat(),
+            'provider': provider_used
+        })
     except Exception as e:
         print(f"Error processing event: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/set-provider', methods=['POST'])
+def set_provider():
+    """Switch the active LLM provider"""
+    global active_provider
+    data = request.json
+    provider = data.get('provider', 'azure')
+    if provider not in ('azure', 'gemini', 'pai'):
+        return jsonify({'error': f'Invalid provider: {provider}'}), 400
+    active_provider = provider
+    print(f"Switched active provider to: {provider}")
+    return jsonify({'success': True, 'active_provider': active_provider})
+
+@app.route('/get-provider', methods=['GET'])
+def get_provider():
+    """Get the active LLM provider"""
+    return jsonify({
+        'active_provider': active_provider,
+        'available': {
+            'azure': bool(AZURE_OPENAI_API_KEY),
+            'gemini': bool(GEMINI_API_KEY),
+            'pai': bool(PAI_API_KEY)
+        }
+    })
 
 @app.route('/audit-log', methods=['GET'])
 def get_audit_log():
@@ -602,6 +738,91 @@ def test_simple():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ============================================================================
+# HELPER FUNCTIONS: Gemini & PAI API calls
+# ============================================================================
+
+def _try_gemini(system_prompt: str, user_prompt: str, event_id: str) -> str:
+    """Try calling Gemini API. Returns response text or empty string on failure."""
+    if not GEMINI_API_KEY:
+        return ""
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        payload = {
+            "contents": [
+                {"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_prompt}"}]}
+            ],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 1024,
+                "thinkingConfig": {"thinkingBudget": 0}
+            }
+        }
+        resp = http_requests.post(url, json=payload, timeout=25)
+        if resp.status_code == 200:
+            data = resp.json()
+            text = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+            if text:
+                audit_log.append({
+                    'action': 'provider_call',
+                    'event_id': event_id,
+                    'decision': 'Used Gemini API',
+                    'reasoning': 'Gemini 2.0 Flash',
+                    'severity': 'INFO',
+                    'timestamp': datetime.now().isoformat()
+                })
+                return text
+        print(f"Gemini API returned {resp.status_code}: {resp.text[:200]}")
+        return ""
+    except Exception as e:
+        print(f"Gemini API error: {e}")
+        return ""
+
+def _try_pai(system_prompt: str, user_prompt: str, event_id: str) -> str:
+    """Try calling PAI API. Returns response text or empty string on failure."""
+    if not PAI_API_KEY:
+        return ""
+    try:
+        headers = {
+            "Authorization": f"Bearer {PAI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "gemma4:26b",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+        }
+        resp = http_requests.post("https://pai-api.thepsi.com/api/v4/chat", json=payload, headers=headers, timeout=25)
+        if resp.status_code == 200:
+            lines = resp.text.strip().split('\n')
+            # PAI streams accumulated text — each 'text' line contains the full response so far.
+            # We only want the LAST 'text' entry (the complete response).
+            final_text = ""
+            for line in lines:
+                if not line: continue
+                try:
+                    data = json.loads(line)
+                    if data.get('type') == 'text':
+                        final_text = data.get('content', '')  # overwrite, not append
+                except: pass
+            if final_text:
+                audit_log.append({
+                    'action': 'provider_call',
+                    'event_id': event_id,
+                    'decision': 'Used PAI API',
+                    'reasoning': 'PAI gemma4:26b',
+                    'severity': 'INFO',
+                    'timestamp': datetime.now().isoformat()
+                })
+                return final_text
+        print(f"PAI API returned {resp.status_code}")
+        return ""
+    except Exception as e:
+        print(f"PAI API error: {e}")
+        return ""
 
 if __name__ == '__main__':
     print(f"\n{'='*60}")
